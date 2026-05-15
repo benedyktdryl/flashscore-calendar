@@ -218,7 +218,9 @@ The install / configuration guide is published as a static site (Vite + React + 
 
 **https://benedyktdryl.github.io/flashscore-calendar/**
 
-Enable it once: **Repository → Settings → Pages → Build and deployment → Source: GitHub Actions**.  
+Enable it once (before the first deploy can succeed): **Repository → Settings → Pages → Build and deployment → Source: GitHub Actions**.  
+If that is still set to “Deploy from a branch” or Pages is off, the deploy job cannot attach to a Pages site.
+
 Pushes to `main` run [`.github/workflows/pages.yml`](.github/workflows/pages.yml) and deploy `website/dist`.
 
 Local preview:

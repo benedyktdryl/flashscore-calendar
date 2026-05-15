@@ -1,5 +1,7 @@
 # Deploy marketing site to GitHub Pages (project site: /flashscore-calendar/).
-# Repo Settings → Pages → Source: GitHub Actions.
+#
+# One-time: Settings → Pages → Build and deployment → Source: GitHub Actions.
+# (Until Pages is enabled, configure-pages would 404; we build with Vite env only.)
 
 name: Deploy GitHub Pages
 
@@ -21,7 +23,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -36,9 +38,7 @@ jobs:
           bun install --frozen-lockfile
           bun run build
 
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: website/dist
           include-hidden-files: true
@@ -51,4 +51,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
