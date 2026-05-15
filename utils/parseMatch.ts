@@ -1,4 +1,4 @@
-import { getButtonMount, getButtonInsertBefore } from './findMatchRows';
+import { getButtonMount } from './findMatchRows';
 import { SELECTORS } from './selectors';
 import type { MatchPayload } from './types';
 import { readPageDate } from './parsePageDate';
@@ -10,27 +10,30 @@ function readTeamName(container: Element | null): string {
   return (container.textContent ?? '').trim();
 }
 
+function extractLeagueName(header: Element): string {
+  const link = header.querySelector('a[class*="headerLeague"], .headerLeague__title');
+  const raw = (link?.textContent ?? header.textContent ?? '').trim();
+  return raw.replace(/\s+/g, ' ').trim();
+}
+
+function isLeagueHeader(el: Element): boolean {
+  if (el.matches('.event__header')) return true;
+  if (el.className && String(el.className).includes('headerLeague')) return true;
+  if (el.querySelector('[class*="headerLeague"]')) return true;
+  return false;
+}
+
+/** Walk only previous siblings so pinned leagues at the top are not picked. */
 function findLeagueName(row: Element): string {
-  let current: Element | null = row.previousElementSibling;
+  const matchRow = getButtonMount(row);
+  let current: Element | null = matchRow.previousElementSibling;
+
   while (current) {
-    if (current.matches(SELECTORS.leagueHeader)) {
-      return (current.textContent ?? '').trim();
+    if (isLeagueHeader(current)) {
+      const name = extractLeagueName(current);
+      if (name) return name;
     }
     current = current.previousElementSibling;
-  }
-
-  const header = row
-    .closest('.sportName, .event, [class*="tournament"], [id="live-table"]')
-    ?.querySelector(SELECTORS.leagueHeader);
-  if (header) return (header.textContent ?? '').trim();
-
-  let walk: Element | null = row.parentElement;
-  for (let i = 0; i < 8 && walk; i += 1) {
-    const leagueLink = walk.querySelector(
-      'a[class*="headerLeague"], .event__header, [class*="tournamentHeader"]',
-    );
-    if (leagueLink) return (leagueLink.textContent ?? '').trim();
-    walk = walk.previousElementSibling ?? walk.parentElement;
   }
 
   return '';
@@ -120,8 +123,7 @@ export function parseMatchRow(
   const timeText = findKickoffTime(row);
   if (!timeText) return null;
 
-  const teams =
-    parseTeamsFromParticipants(row) ?? parseTeamsFromRowLink(row);
+  const teams = parseTeamsFromParticipants(row) ?? parseTeamsFromRowLink(row);
   if (!teams) return null;
 
   const kickoffIso = buildKickoffIso(resolvedDate, timeText);

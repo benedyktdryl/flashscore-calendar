@@ -24,13 +24,33 @@ export function getButtonMount(row: Element): Element {
   );
 }
 
-/** Insert before betting/live badge so the button sits with Preview / TV icons. */
-export function getButtonInsertBefore(row: Element): Element | null {
-  const mount = getButtonMount(row);
-  const anchor =
-    mount.querySelector('.liveBetWrapper') ??
-    mount.querySelector(SELECTORS.actionsAnchor);
-  return anchor;
+/** Place calendar control immediately after the TV icon (or before LIVE badge). */
+export function insertCalendarButton(mount: Element, button: HTMLElement): void {
+  const tv = mount.querySelector('.event__icon--tv');
+  if (tv) {
+    tv.insertAdjacentElement('afterend', button);
+    return;
+  }
+
+  const audio = mount.querySelector('.event__icon--audio');
+  if (audio) {
+    audio.insertAdjacentElement('afterend', button);
+    return;
+  }
+
+  const preview = mount.querySelector('a.icon--preview, a[data-testid="previewIcon"]');
+  if (preview) {
+    preview.insertAdjacentElement('afterend', button);
+    return;
+  }
+
+  const liveBet = mount.querySelector('.liveBetWrapper');
+  if (liveBet?.parentElement) {
+    liveBet.parentElement.insertBefore(button, liveBet);
+    return;
+  }
+
+  mount.append(button);
 }
 
 export function findMatchRows(root: ParentNode = document): Element[] {

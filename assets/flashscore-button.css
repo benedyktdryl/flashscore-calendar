@@ -1,44 +1,56 @@
-.fsc-add-calendar-btn {
+/* Match FlashScore row icons (TV, audio, preview) */
+button.fsc-add-calendar-btn.event__icon {
   display: inline-flex;
   align-items: center;
-  margin: 0 6px 0 4px;
-  padding: 3px 10px;
-  border: 1px solid #1a73e8;
-  border-radius: 4px;
-  background: #fff;
-  color: #1a73e8;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.3;
+  justify-content: center;
+  box-sizing: border-box;
+  width: auto;
+  min-width: 14px;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #555e61;
   cursor: pointer;
-  white-space: nowrap;
   flex-shrink: 0;
   position: relative;
   z-index: 30;
   pointer-events: auto;
   vertical-align: middle;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  line-height: 0;
+  font: inherit;
+  box-shadow: none;
 }
 
-.fsc-add-calendar-btn:hover:not(:disabled) {
-  background: #e8f0fe;
+button.fsc-add-calendar-btn.event__icon:hover:not(:disabled) {
+  color: #001e28;
+  background: transparent;
 }
 
-.fsc-add-calendar-btn:disabled {
-  opacity: 0.9;
+button.fsc-add-calendar-btn.event__icon:disabled {
   cursor: default;
 }
 
-.fsc-add-calendar-btn--added {
-  border-color: #2e7d32;
-  color: #2e7d32;
-  background: #e8f5e9;
+button.fsc-add-calendar-btn.event__icon svg {
+  display: block;
 }
 
-.fsc-add-calendar-btn--error {
-  border-color: #c62828;
+button.fsc-add-calendar-btn--added.event__icon {
+  color: #2e7d32;
+}
+
+button.fsc-add-calendar-btn--added.event__icon:hover {
+  color: #1b5e20;
+}
+
+button.fsc-add-calendar-btn--error.event__icon {
   color: #c62828;
-  background: #ffebee;
+}
+
+button.fsc-add-calendar-btn--error.event__icon:hover {
+  color: #b71c1c;
 }
 
 .event__match--withRowLink .fsc-add-calendar-btn {

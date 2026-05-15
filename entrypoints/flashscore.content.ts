@@ -1,5 +1,6 @@
 import '../assets/flashscore-button.css';
-import { findMatchRows, getButtonInsertBefore, getButtonMount } from '../utils/findMatchRows';
+import { calendarIconSvg, checkIconSvg } from '../utils/calendarIcon';
+import { findMatchRows, getButtonMount, insertCalendarButton } from '../utils/findMatchRows';
 import { buildGoogleCalendarTemplateUrl } from '../utils/googleCalendarUrl';
 import { downloadIcsFile } from '../utils/ics';
 import { getCalendarMode, type CalendarMode } from '../utils/mode';
@@ -12,11 +13,59 @@ import type { AddEventRequest, AddEventResponse, MatchPayload } from '../utils/t
 const STORAGE_PREFIX = 'fsc-added:';
 const RESCAN_MS = [0, 400, 1200, 3000, 6000];
 
-const MODE_BUTTON_LABEL: Record<CalendarMode, string> = {
-  ics: '+ ICS',
-  'google-url': '+ Kalendarz',
-  oauth: '+ Kalendarz',
+const MODE_LABEL: Record<CalendarMode, string> = {
+  ics: 'Pobierz plik .ics',
+  'google-url': 'Dodaj do Google Calendar',
+  oauth: 'Dodaj do kalendarza (OAuth)',
 };
+
+function setButtonIcon(button: HTMLButtonElement, state: 'idle' | 'loading' | 'added' | 'error'): void {
+  if (state === 'added') {
+    button.innerHTML = checkIconSvg();
+    return;
+  }
+  if (state === 'loading') {
+    button.innerHTML = calendarIconSvg();
+    button.style.opacity = '0.45';
+    return;
+  }
+  button.style.opacity = '';
+  button.innerHTML = calendarIconSvg();
+}
+
+function setButtonState(
+  button: HTMLButtonElement,
+  state: 'idle' | 'loading' | 'added' | 'error',
+): void {
+  button.disabled = state === 'loading' || state === 'added';
+  button.classList.remove(`${BUTTON_CLASS}--added`, `${BUTTON_CLASS}--error`);
+  button.removeAttribute('aria-label');
+
+  if (state === 'added') {
+    button.classList.add(`${BUTTON_CLASS}--added`);
+    button.setAttribute('aria-label', 'Dodano do kalendarza');
+    setButtonIcon(button, 'added');
+    return;
+  }
+
+  if (state === 'error') {
+    button.classList.add(`${BUTTON_CLASS}--error`);
+    button.setAttribute('aria-label', 'Błąd dodawania — kliknij ponownie');
+    button.disabled = false;
+    setButtonIcon(button, 'error');
+    return;
+  }
+
+  if (state === 'loading') {
+    button.setAttribute('aria-label', 'Dodawanie…');
+    setButtonIcon(button, 'loading');
+    return;
+  }
+
+  const mode = button.dataset.fscMode as CalendarMode | undefined;
+  button.setAttribute('aria-label', mode ? MODE_LABEL[mode] : 'Dodaj do kalendarza');
+  setButtonIcon(button, 'idle');
+}
 
 async function isMatchAdded(matchId: string): Promise<boolean> {
   const key = STORAGE_PREFIX + matchId;
@@ -26,36 +75,6 @@ async function isMatchAdded(matchId: string): Promise<boolean> {
 
 async function markMatchAdded(matchId: string, link: string): Promise<void> {
   await browser.storage.local.set({ [STORAGE_PREFIX + matchId]: link });
-}
-
-function setButtonState(
-  button: HTMLButtonElement,
-  state: 'idle' | 'loading' | 'added' | 'error',
-  label?: string,
-): void {
-  button.disabled = state === 'loading' || state === 'added';
-  button.classList.remove(`${BUTTON_CLASS}--added`, `${BUTTON_CLASS}--error`);
-
-  if (state === 'added') {
-    button.classList.add(`${BUTTON_CLASS}--added`);
-    button.textContent = label ?? 'Dodano';
-    return;
-  }
-
-  if (state === 'error') {
-    button.classList.add(`${BUTTON_CLASS}--error`);
-    button.textContent = label ?? 'Błąd';
-    button.disabled = false;
-    return;
-  }
-
-  if (state === 'loading') {
-    button.textContent = '...';
-    return;
-  }
-
-  const mode = button.dataset.fscMode as CalendarMode | undefined;
-  button.textContent = mode ? MODE_BUTTON_LABEL[mode] : '+ Kalendarz';
 }
 
 async function addViaIcs(match: MatchPayload): Promise<string> {
@@ -112,24 +131,18 @@ async function handleAddClick(
 
     await markMatchAdded(match.id, link);
     setButtonState(button, 'added');
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Błąd';
-    setButtonState(button, 'error', message.slice(0, 40));
+  } catch {
+    setButtonState(button, 'error');
   }
 }
 
 function createButton(match: MatchPayload, mode: CalendarMode): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = BUTTON_CLASS;
+  button.className = `event__icon ${BUTTON_CLASS}`;
   button.setAttribute(BUTTON_ATTR, 'true');
   button.dataset.fscMode = mode;
-  button.title =
-    mode === 'ics'
-      ? 'Pobierz plik .ics (import do dowolnego kalendarza)'
-      : mode === 'google-url'
-        ? 'Otwórz formularz Google Calendar w nowej karcie (bez OAuth)'
-        : 'Dodaj do domyślnego Google Calendar (OAuth)';
+  button.title = MODE_LABEL[mode];
   setButtonState(button, 'idle');
   button.addEventListener('click', (event) => {
     event.preventDefault();
@@ -147,12 +160,7 @@ function injectButton(row: Element, pageDate: string | null, mode: CalendarMode)
   if (!match) return;
 
   const button = createButton(match, mode);
-  const insertBefore = getButtonInsertBefore(row);
-  if (insertBefore?.parentElement) {
-    insertBefore.parentElement.insertBefore(button, insertBefore);
-  } else {
-    mount.append(button);
-  }
+  insertCalendarButton(mount, button);
 
   void isMatchAdded(match.id).then((added) => {
     if (added) setButtonState(button, 'added');
@@ -173,7 +181,7 @@ function scheduleRescans(mode: CalendarMode): void {
       if (ms === 6000) {
         const buttons = document.querySelectorAll(`.${BUTTON_CLASS}`).length;
         console.info(
-          `[flashscore-calendar] Rows scanned: ${count}, buttons on page: ${buttons}, date: ${readPageDate() ?? 'unknown'}`,
+          `[flashscore-calendar] Rows: ${count}, buttons: ${buttons}, date: ${readPageDate() ?? '?'}`,
         );
       }
     }, ms);
@@ -193,10 +201,7 @@ export default defineContentScript({
       scheduleRescans(mode);
     };
 
-    void getCalendarMode().then(start).catch((error) => {
-      console.error('[flashscore-calendar] Failed to read mode', error);
-      scheduleRescans('google-url');
-    });
+    void getCalendarMode().then(start).catch(() => scheduleRescans('google-url'));
 
     browser.storage.onChanged.addListener((changes, area) => {
       if (area !== 'sync' || !changes.calendarMode) return;
