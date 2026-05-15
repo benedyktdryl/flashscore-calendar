@@ -1,0 +1,31 @@
+.fsc-add-calendar-btn {
+  margin-left: 6px;
+  padding: 2px 8px;
+  border: 1px solid #4a90d9;
+  border-radius: 4px;
+  background: transparent;
+  color: #4a90d9;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fsc-add-calendar-btn:hover:not(:disabled) {
+  background: rgba(74, 144, 217, 0.12);
+}
+
+.fsc-add-calendar-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.fsc-add-calendar-btn--added {
+  border-color: #2e7d32;
+  color: #2e7d32;
+}
+
+.fsc-add-calendar-btn--error {
+  border-color: #c62828;
+  color: #c62828;
+}

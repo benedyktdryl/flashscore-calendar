@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FlashScore → Kalendarz — ustawienia</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      body {
+        max-width: 36rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      h1 {
+        font-size: 1.25rem;
+      }
+      fieldset {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 1rem;
+      }
+      label {
+        display: block;
+        margin: 0.75rem 0;
+        cursor: pointer;
+      }
+      label.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .hint {
+        font-size: 0.875rem;
+        color: #666;
+        margin-top: 0.25rem;
+      }
+      #status {
+        margin-top: 1rem;
+        font-size: 0.875rem;
+      }
+      a {
+        color: #1a73e8;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tryb dodawania do kalendarza</h1>
+    <p>Wybierz, co ma się stać po kliknięciu <strong>+ Kalendarz</strong> na FlashScore.</p>
+
+    <fieldset>
+      <legend>Tryb</legend>
+
+      <label>
+        <input type="radio" name="mode" value="google-url" />
+        <strong>Otwórz Google Calendar</strong> (zalecany do testów)
+        <span class="hint"
+          >Nowa karta z gotowym formularzem wydarzenia — bez OAuth i bez Google Cloud.</span
+        >
+      </label>
+
+      <label>
+        <input type="radio" name="mode" value="ics" />
+        <strong>Pobierz plik .ics</strong>
+        <span class="hint">Plik do importu w Google Calendar, Apple Calendar, Outlook itd.</span>
+      </label>
+
+      <label id="oauth-label">
+        <input type="radio" name="mode" value="oauth" id="oauth-radio" />
+        <strong>Dodaj w tle (OAuth)</strong>
+        <span class="hint" id="oauth-hint"
+          >Wymaga <code>WXT_GOOGLE_CLIENT_ID</code> w <code>.env</code> i przebudowy.</span
+        >
+      </label>
+    </fieldset>
+
+    <p id="status" role="status"></p>
+
+    <p class="hint">Szczegóły: plik <code>README.md</code> w repozytorium rozszerzenia.</p>
+
+    <script type="module" src="./options/main.ts"></script>
+  </body>
+</html>
