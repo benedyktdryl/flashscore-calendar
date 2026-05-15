@@ -2,6 +2,9 @@ import { SELECTORS } from './selectors';
 
 const TEAM_VS_TEAM = /^(.+?)\s+-\s+(.+?)$/;
 
+/** Grid columns on the right: iconStr (audio) | iconInf | iconTv | iconStd | liveIcon */
+const ICON_SLOTS_NEXT_TO_TV = ['iconStd', 'iconInf'] as const;
+
 function isTeamVsTeamLink(anchor: HTMLAnchorElement): boolean {
   const label = (anchor.getAttribute('aria-label') ?? anchor.textContent ?? '')
     .replace(/\s+/g, ' ')
@@ -24,29 +27,37 @@ export function getButtonMount(row: Element): Element {
   );
 }
 
-/** Place calendar control immediately after the TV icon (or before LIVE badge). */
+function usedGridAreas(mount: Element): Set<string> {
+  const used = new Set<string>();
+  for (const child of mount.children) {
+    used.add(getComputedStyle(child).gridArea);
+  }
+  return used;
+}
+
+/** Pick an empty icon column beside TV (FlashScore CSS grid). */
+export function getCalendarGridArea(mount: Element): string {
+  const used = usedGridAreas(mount);
+  for (const slot of ICON_SLOTS_NEXT_TO_TV) {
+    if (!used.has(slot)) return slot;
+  }
+  return 'iconStd';
+}
+
+/** Place in the match row icon strip (same grid row as TV / LIVE). */
 export function insertCalendarButton(mount: Element, button: HTMLElement): void {
-  const tv = mount.querySelector('.event__icon--tv');
-  if (tv) {
-    tv.insertAdjacentElement('afterend', button);
-    return;
-  }
-
-  const audio = mount.querySelector('.event__icon--audio');
-  if (audio) {
-    audio.insertAdjacentElement('afterend', button);
-    return;
-  }
-
-  const preview = mount.querySelector('a.icon--preview, a[data-testid="previewIcon"]');
-  if (preview) {
-    preview.insertAdjacentElement('afterend', button);
-    return;
-  }
+  const gridArea = getCalendarGridArea(mount);
+  button.style.gridArea = gridArea;
 
   const liveBet = mount.querySelector('.liveBetWrapper');
   if (liveBet?.parentElement) {
     liveBet.parentElement.insertBefore(button, liveBet);
+    return;
+  }
+
+  const tv = mount.querySelector('.event__icon--tv');
+  if (tv) {
+    tv.insertAdjacentElement('afterend', button);
     return;
   }
 
