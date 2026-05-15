@@ -41,14 +41,6 @@ button.fsc-add-calendar-btn.event__icon .fsc-calendar-icon__svg {
   height: 14px;
 }
 
-button.fsc-add-calendar-btn--added.event__icon {
-  color: #6b9b6e;
-}
-
-button.fsc-add-calendar-btn--added.event__icon:hover {
-  color: #2e7d32;
-}
-
 button.fsc-add-calendar-btn--error.event__icon {
   color: #c9a0a0;
 }

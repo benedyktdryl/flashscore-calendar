@@ -2,8 +2,8 @@ import { SELECTORS } from './selectors';
 
 const TEAM_VS_TEAM = /^(.+?)\s+-\s+(.+?)$/;
 
-/** Grid columns on the right: iconStr (audio) | iconInf | iconTv | iconStd | liveIcon */
-const ICON_SLOTS_NEXT_TO_TV = ['iconStd', 'iconInf'] as const;
+/** Grid columns: iconStr (audio) | iconInf | iconTv | iconStd | liveIcon */
+const ICON_SLOTS_NEXT_TO_TV = ['iconInf'] as const;
 
 function isTeamVsTeamLink(anchor: HTMLAnchorElement): boolean {
   const label = (anchor.getAttribute('aria-label') ?? anchor.textContent ?? '')
@@ -49,15 +49,21 @@ export function insertCalendarButton(mount: Element, button: HTMLElement): void 
   const gridArea = getCalendarGridArea(mount);
   button.style.gridArea = gridArea;
 
-  const liveBet = mount.querySelector('.liveBetWrapper');
-  if (liveBet?.parentElement) {
-    liveBet.parentElement.insertBefore(button, liveBet);
+  const tv = mount.querySelector('.event__icon--tv');
+  if (tv) {
+    tv.insertAdjacentElement('beforebegin', button);
     return;
   }
 
-  const tv = mount.querySelector('.event__icon--tv');
-  if (tv) {
-    tv.insertAdjacentElement('afterend', button);
+  const audio = mount.querySelector('.event__icon--audio');
+  if (audio) {
+    audio.insertAdjacentElement('afterend', button);
+    return;
+  }
+
+  const liveBet = mount.querySelector('.liveBetWrapper');
+  if (liveBet?.parentElement) {
+    liveBet.parentElement.insertBefore(button, liveBet);
     return;
   }
 

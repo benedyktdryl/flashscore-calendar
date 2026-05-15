@@ -1,5 +1,5 @@
 import '../assets/flashscore-button.css';
-import { calendarIconSvg, checkIconSvg } from '../utils/calendarIcon';
+import { calendarIconSvg } from '../utils/calendarIcon';
 import { findMatchRows, getButtonMount, insertCalendarButton } from '../utils/findMatchRows';
 import { buildGoogleCalendarTemplateUrl } from '../utils/googleCalendarUrl';
 import { downloadIcsFile } from '../utils/ics';
@@ -10,7 +10,6 @@ import { FLASHSCORE_MATCHES } from '../utils/flashscoreHosts';
 import { BUTTON_ATTR, BUTTON_CLASS, SELECTORS } from '../utils/selectors';
 import type { AddEventRequest, AddEventResponse, MatchPayload } from '../utils/types';
 
-const STORAGE_PREFIX = 'fsc-added:';
 const RESCAN_MS = [0, 400, 1200, 3000, 6000];
 
 const MODE_LABEL: Record<CalendarMode, string> = {
@@ -19,76 +18,44 @@ const MODE_LABEL: Record<CalendarMode, string> = {
   oauth: 'Dodaj do kalendarza (OAuth)',
 };
 
-function setButtonIcon(button: HTMLButtonElement, state: 'idle' | 'loading' | 'added' | 'error'): void {
-  if (state === 'added') {
-    button.innerHTML = checkIconSvg();
-    return;
-  }
-  if (state === 'loading') {
-    button.innerHTML = calendarIconSvg();
-    button.style.opacity = '0.45';
-    return;
-  }
-  button.style.opacity = '';
-  button.innerHTML = calendarIconSvg();
-}
-
 function setButtonState(
   button: HTMLButtonElement,
-  state: 'idle' | 'loading' | 'added' | 'error',
+  state: 'idle' | 'loading' | 'error',
 ): void {
-  button.disabled = state === 'loading' || state === 'added';
-  button.classList.remove(`${BUTTON_CLASS}--added`, `${BUTTON_CLASS}--error`);
-  button.removeAttribute('aria-label');
-
-  if (state === 'added') {
-    button.classList.add(`${BUTTON_CLASS}--added`);
-    button.setAttribute('aria-label', 'Dodano do kalendarza');
-    setButtonIcon(button, 'added');
-    return;
-  }
+  button.disabled = state === 'loading';
+  button.classList.remove(`${BUTTON_CLASS}--error`);
 
   if (state === 'error') {
     button.classList.add(`${BUTTON_CLASS}--error`);
-    button.setAttribute('aria-label', 'Błąd dodawania — kliknij ponownie');
-    button.disabled = false;
-    setButtonIcon(button, 'error');
+    button.setAttribute('aria-label', 'Błąd — kliknij ponownie');
+    button.style.opacity = '';
+    button.innerHTML = calendarIconSvg();
     return;
   }
 
   if (state === 'loading') {
-    button.setAttribute('aria-label', 'Dodawanie…');
-    setButtonIcon(button, 'loading');
+    button.setAttribute('aria-label', 'Otwieranie kalendarza…');
+    button.style.opacity = '0.45';
+    button.innerHTML = calendarIconSvg();
     return;
   }
 
   const mode = button.dataset.fscMode as CalendarMode | undefined;
   button.setAttribute('aria-label', mode ? MODE_LABEL[mode] : 'Dodaj do kalendarza');
-  setButtonIcon(button, 'idle');
+  button.style.opacity = '';
+  button.innerHTML = calendarIconSvg();
 }
 
-async function isMatchAdded(matchId: string): Promise<boolean> {
-  const key = STORAGE_PREFIX + matchId;
-  const stored = await browser.storage.local.get(key);
-  return Boolean(stored[key]);
-}
-
-async function markMatchAdded(matchId: string, link: string): Promise<void> {
-  await browser.storage.local.set({ [STORAGE_PREFIX + matchId]: link });
-}
-
-async function addViaIcs(match: MatchPayload): Promise<string> {
+async function addViaIcs(match: MatchPayload): Promise<void> {
   downloadIcsFile(match);
-  return 'ics://downloaded';
 }
 
-async function addViaGoogleUrl(match: MatchPayload): Promise<string> {
+async function addViaGoogleUrl(match: MatchPayload): Promise<void> {
   const url = buildGoogleCalendarTemplateUrl(match);
   window.open(url, '_blank', 'noopener,noreferrer');
-  return url;
 }
 
-async function addViaOAuth(match: MatchPayload): Promise<string> {
+async function addViaOAuth(match: MatchPayload): Promise<void> {
   const response = (await browser.runtime.sendMessage({
     type: 'ADD_EVENT',
     match,
@@ -97,8 +64,6 @@ async function addViaOAuth(match: MatchPayload): Promise<string> {
   if (!response?.ok) {
     throw new Error(response?.error ?? 'Brak odpowiedzi rozszerzenia.');
   }
-
-  return response.htmlLink;
 }
 
 async function handleAddClick(
@@ -106,31 +71,23 @@ async function handleAddClick(
   match: MatchPayload,
   mode: CalendarMode,
 ): Promise<void> {
-  if (await isMatchAdded(match.id)) {
-    setButtonState(button, 'added');
-    return;
-  }
-
   setButtonState(button, 'loading');
 
   try {
-    let link: string;
     switch (mode) {
       case 'ics':
-        link = await addViaIcs(match);
+        await addViaIcs(match);
         break;
       case 'google-url':
-        link = await addViaGoogleUrl(match);
+        await addViaGoogleUrl(match);
         break;
       case 'oauth':
-        link = await addViaOAuth(match);
+        await addViaOAuth(match);
         break;
       default:
         throw new Error('Nieznany tryb kalendarza.');
     }
-
-    await markMatchAdded(match.id, link);
-    setButtonState(button, 'added');
+    setButtonState(button, 'idle');
   } catch {
     setButtonState(button, 'error');
   }
@@ -161,10 +118,6 @@ function injectButton(row: Element, pageDate: string | null, mode: CalendarMode)
 
   const button = createButton(match, mode);
   insertCalendarButton(mount, button);
-
-  void isMatchAdded(match.id).then((added) => {
-    if (added) setButtonState(button, 'added');
-  });
 }
 
 function scanAndInject(root: ParentNode, mode: CalendarMode): number {
@@ -177,13 +130,7 @@ function scanAndInject(root: ParentNode, mode: CalendarMode): number {
 function scheduleRescans(mode: CalendarMode): void {
   for (const ms of RESCAN_MS) {
     window.setTimeout(() => {
-      const count = scanAndInject(document, mode);
-      if (ms === 6000) {
-        const buttons = document.querySelectorAll(`.${BUTTON_CLASS}`).length;
-        console.info(
-          `[flashscore-calendar] Rows: ${count}, buttons: ${buttons}, date: ${readPageDate() ?? '?'}`,
-        );
-      }
+      scanAndInject(document, mode);
     }, ms);
   }
 }
