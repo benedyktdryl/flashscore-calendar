@@ -1,4 +1,5 @@
 import '../assets/flashscore-button.css';
+import { findMatchRows, getButtonMount } from '../utils/findMatchRows';
 import { buildGoogleCalendarTemplateUrl } from '../utils/googleCalendarUrl';
 import { downloadIcsFile } from '../utils/ics';
 import { getCalendarMode, type CalendarMode } from '../utils/mode';
@@ -9,6 +10,7 @@ import { BUTTON_ATTR, BUTTON_CLASS, SELECTORS } from '../utils/selectors';
 import type { AddEventRequest, AddEventResponse, MatchPayload } from '../utils/types';
 
 const STORAGE_PREFIX = 'fsc-added:';
+const RESCAN_MS = [0, 400, 1200, 3000, 6000];
 
 const MODE_BUTTON_LABEL: Record<CalendarMode, string> = {
   ics: '+ ICS',
@@ -138,23 +140,36 @@ function createButton(match: MatchPayload, mode: CalendarMode): HTMLButtonElemen
 }
 
 function injectButton(row: Element, pageDate: string | null, mode: CalendarMode): void {
-  if (row.querySelector(`.${BUTTON_CLASS}`)) return;
+  const mount = getButtonMount(row);
+  if (mount.querySelector(`.${BUTTON_CLASS}`)) return;
 
   const match = parseMatchRow(row, pageDate);
   if (!match) return;
 
   const button = createButton(match, mode);
-  row.append(button);
+  mount.append(button);
 
   void isMatchAdded(match.id).then((added) => {
     if (added) setButtonState(button, 'added');
   });
 }
 
-function scanAndInject(root: ParentNode, mode: CalendarMode): void {
+function scanAndInject(root: ParentNode, mode: CalendarMode): number {
   const pageDate = readPageDate();
-  const rows = root.querySelectorAll(SELECTORS.matchRow);
+  const rows = findMatchRows(root);
   rows.forEach((row) => injectButton(row, pageDate, mode));
+  return rows.length;
+}
+
+function scheduleRescans(mode: CalendarMode): void {
+  for (const ms of RESCAN_MS) {
+    window.setTimeout(() => {
+      const count = scanAndInject(document, mode);
+      if (count > 0 && ms === 0) {
+        console.info(`[flashscore-calendar] Injected buttons for ${count} match row(s).`);
+      }
+    }, ms);
+  }
 }
 
 export default defineContentScript({
@@ -163,31 +178,29 @@ export default defineContentScript({
   main() {
     let currentMode: CalendarMode = 'google-url';
 
-    void getCalendarMode().then((mode) => {
+    const start = (mode: CalendarMode) => {
       currentMode = mode;
-      scanAndInject(document, currentMode);
-    });
+      scheduleRescans(mode);
+    };
+
+    void getCalendarMode().then(start);
 
     browser.storage.onChanged.addListener((changes, area) => {
       if (area !== 'sync' || !changes.calendarMode) return;
       currentMode = changes.calendarMode.newValue as CalendarMode;
       document.querySelectorAll(`.${BUTTON_CLASS}`).forEach((el) => el.remove());
+      scheduleRescans(currentMode);
+    });
+
+    const observer = new MutationObserver(() => {
       scanAndInject(document, currentMode);
     });
 
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        mutation.addedNodes.forEach((node) => {
-          if (!(node instanceof Element)) return;
-          if (node.matches(SELECTORS.matchRow)) {
-            injectButton(node, readPageDate(), currentMode);
-            return;
-          }
-          scanAndInject(node, currentMode);
-        });
-      }
-    });
+    const observeTarget =
+      document.querySelector('#live-table') ??
+      document.querySelector(SELECTORS.mainFeed) ??
+      document.body;
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(observeTarget, { childList: true, subtree: true });
   },
 });

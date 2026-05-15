@@ -1,3 +1,4 @@
+import { getButtonMount } from './findMatchRows';
 import { SELECTORS } from './selectors';
 import type { MatchPayload } from './types';
 import { readPageDate } from './parsePageDate';
@@ -11,12 +12,26 @@ function findLeagueName(row: Element): string {
     current = current.previousElementSibling;
   }
 
-  const header = row.closest('.sportName, .event')?.querySelector(SELECTORS.leagueHeader);
-  return (header?.textContent ?? '').trim();
+  const header = row
+    .closest('.sportName, .event, [class*="tournament"], [id="live-table"]')
+    ?.querySelector(SELECTORS.leagueHeader);
+  if (header) return (header.textContent ?? '').trim();
+
+  let walk: Element | null = row.parentElement;
+  for (let i = 0; i < 8 && walk; i += 1) {
+    const leagueLink = walk.querySelector(
+      'a[class*="headerLeague"], .event__header, [class*="tournamentHeader"]',
+    );
+    if (leagueLink) return (leagueLink.textContent ?? '').trim();
+    walk = walk.previousElementSibling ?? walk.parentElement;
+  }
+
+  return '';
 }
 
 function readBroadcast(row: Element): string | undefined {
-  const tv = row.querySelector(SELECTORS.tvIcon);
+  const root = row.closest('.event__match, [class*="event"]') ?? row.parentElement ?? row;
+  const tv = root.querySelector(SELECTORS.tvIcon);
   if (!tv) return undefined;
 
   const title = tv.getAttribute('title')?.trim();
@@ -45,34 +60,86 @@ function buildKickoffIso(pageDate: string, timeText: string): string | null {
 
 function matchIdFromRow(row: Element, home: string, away: string, kickoffIso: string): string {
   if (row.id) return row.id;
+  const anchor = row.querySelector('a[href*="/mecz/"], a[href*="/match/"]') ?? (row.matches('a') ? row : null);
+  const href = anchor?.getAttribute('href');
+  if (href) return href;
   return `${home}|${away}|${kickoffIso}`;
 }
 
-export function parseMatchRow(row: Element, pageDate = readPageDate()): MatchPayload | null {
-  const timeEl = row.querySelector(SELECTORS.matchTime);
-  const homeEl = row.querySelector(SELECTORS.homeTeam);
-  const awayEl = row.querySelector(SELECTORS.awayTeam);
-  if (!timeEl || !homeEl || !awayEl) return null;
+function findKickoffTime(row: Element): string | null {
+  const mount = getButtonMount(row);
+  const timeEl = mount.querySelector(SELECTORS.matchTime);
+  if (timeEl) {
+    const text = (timeEl.textContent ?? '').trim();
+    if (isScheduledKickoff(text)) return text;
+  }
 
-  const timeText = (timeEl.textContent ?? '').trim();
-  if (!isScheduledKickoff(timeText)) return null;
+  const container = mount.closest('[class*="event"]') ?? mount.parentElement ?? mount;
+  const timeCandidates = container.querySelectorAll(
+    '.event__time, [class*="event__time"], [class*="time"]',
+  );
+  for (const el of timeCandidates) {
+    const text = (el.textContent ?? '').trim();
+    if (isScheduledKickoff(text)) return text;
+  }
+
+  const blockText = container.textContent ?? '';
+  const match = blockText.match(/\b(\d{1,2}:\d{2})\b/);
+  return match?.[1] ?? null;
+}
+
+function parseTeamsFromParticipants(row: Element): { home: string; away: string } | null {
+  const mount = getButtonMount(row);
+  const homeEl = mount.querySelector(SELECTORS.homeTeam);
+  const awayEl = mount.querySelector(SELECTORS.awayTeam);
+  if (!homeEl || !awayEl) return null;
 
   const home = (homeEl.textContent ?? '').trim();
   const away = (awayEl.textContent ?? '').trim();
   if (!home || !away) return null;
+  return { home, away };
+}
 
-  if (!pageDate) return null;
+function parseTeamsFromLink(row: Element): { home: string; away: string } | null {
+  const anchor =
+    (row.matches('a') ? row : null) ??
+    row.querySelector('a[href*="/mecz/"], a[href*="/match/"]');
+  if (!anchor) return null;
 
-  const kickoffIso = buildKickoffIso(pageDate, timeText);
+  const text = (anchor.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const parts = text.split(/\s+-\s+/);
+  if (parts.length < 2) return null;
+
+  const home = parts[0]?.trim();
+  const away = parts.slice(1).join(' - ').trim();
+  if (!home || !away) return null;
+  return { home, away };
+}
+
+export function parseMatchRow(
+  row: Element,
+  pageDate: string | null = readPageDate(),
+): MatchPayload | null {
+  const resolvedDate = pageDate ?? readPageDate();
+  if (!resolvedDate) return null;
+
+  const timeText = findKickoffTime(row);
+  if (!timeText) return null;
+
+  const teams = parseTeamsFromParticipants(row) ?? parseTeamsFromLink(row);
+  if (!teams) return null;
+
+  const kickoffIso = buildKickoffIso(resolvedDate, timeText);
   if (!kickoffIso) return null;
 
-  const league = findLeagueName(row);
-  const broadcast = readBroadcast(row);
+  const mount = getButtonMount(row);
+  const league = findLeagueName(mount);
+  const broadcast = readBroadcast(mount);
 
   return {
-    id: matchIdFromRow(row, home, away, kickoffIso),
-    home,
-    away,
+    id: matchIdFromRow(mount, teams.home, teams.away, kickoffIso),
+    home: teams.home,
+    away: teams.away,
     league,
     kickoffIso,
     broadcast,
