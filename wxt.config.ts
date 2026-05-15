@@ -1,5 +1,6 @@
 import { defineConfig } from 'wxt';
 import { getGoogleClientId, isOAuthConfigured } from './utils/config';
+import { FLASHSCORE_HOST_PERMISSIONS } from './utils/flashscoreHosts';
 
 const googleClientId = getGoogleClientId();
 
@@ -12,8 +13,7 @@ export default defineConfig({
     permissions: ['storage', ...(isOAuthConfigured() ? (['identity'] as const) : [])],
     host_permissions: [
       ...(isOAuthConfigured() ? ['https://www.googleapis.com/*'] : []),
-      '*://www.flashscore.*/*',
-      '*://*.flashscore.pl/*',
+      ...FLASHSCORE_HOST_PERMISSIONS,
     ],
     ...(googleClientId
       ? {

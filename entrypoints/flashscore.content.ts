@@ -4,6 +4,7 @@ import { downloadIcsFile } from '../utils/ics';
 import { getCalendarMode, type CalendarMode } from '../utils/mode';
 import { parseMatchRow } from '../utils/parseMatch';
 import { readPageDate } from '../utils/parsePageDate';
+import { FLASHSCORE_MATCHES } from '../utils/flashscoreHosts';
 import { BUTTON_ATTR, BUTTON_CLASS, SELECTORS } from '../utils/selectors';
 import type { AddEventRequest, AddEventResponse, MatchPayload } from '../utils/types';
 
@@ -157,7 +158,7 @@ function scanAndInject(root: ParentNode, mode: CalendarMode): void {
 }
 
 export default defineContentScript({
-  matches: ['*://www.flashscore.*/*', '*://*.flashscore.pl/*'],
+  matches: [...FLASHSCORE_MATCHES],
   runAt: 'document_idle',
   main() {
     let currentMode: CalendarMode = 'google-url';
