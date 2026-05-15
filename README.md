@@ -17,7 +17,7 @@ Three modes are selectable in extension **Options** (`chrome.storage.sync` → `
 - **Default mode** is `google-url` — fastest way to test after `bun run dev`; no `.env`.
 - **OAuth is optional at build time**: without a valid `WXT_GOOGLE_CLIENT_ID`, the manifest omits `identity` / `oauth2`; the OAuth radio is disabled in Options.
 - **Same match data** in all modes: kickoff from page date + row time, summary `Home - Away`, description = league + broadcast (if TV tooltip is in DOM).
-- **“Dodano”** is shown after any successful mode (opened tab, downloaded ICS, or API create); stored per match id in `chrome.storage.local`.
+- **Repeat clicks:** the row control stays a calendar icon so you can open Google Calendar or download `.ics` again if you cancelled; **OAuth** mode only shows a brief loading state while the API runs.
 
 Change mode: right‑click extension icon → **Options**, or `chrome://extensions` → **Details** → **Extension options**.
 
@@ -204,7 +204,25 @@ wxt.config.ts             # outDir: dist, conditional oauth2 manifest
 ```bash
 bun run dev          # development → dist/chrome-mv3-dev/
 bun run build        # production → dist/chrome-mv3/
+bun run zip          # production zip → dist/*-chrome.zip
 bun run compile      # TypeScript
 bun run lint         # oxlint
 bun run format       # oxfmt
 ```
+
+## Chrome Web Store (automated release)
+
+GitHub Actions can **build**, **attach the zip to a GitHub Release**, and **upload + publish** to the Chrome Web Store when you push a **version tag** (`v0.2.0`, etc.).
+
+1. Configure repository **secrets** and complete the one-time Store / OAuth setup — see **[docs/CHROME_WEB_STORE_RELEASE.md](docs/CHROME_WEB_STORE_RELEASE.md)**.
+2. Bump `version` in `package.json`, commit, then:
+
+   ```bash
+   git tag v0.2.0 && git push origin v0.2.0
+   ```
+
+3. Watch **Actions → Release (Chrome)**.
+
+Manual run (e.g. test CI without uploading): **Actions → Release (Chrome) → Run workflow** and turn off **publish_to_chrome**.
+
+There is no separate “sync” step: the refresh token ties the API to **your** publisher account; each tag push submits a new package to **that** extension ID.
