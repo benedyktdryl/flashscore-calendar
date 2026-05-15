@@ -130,6 +130,16 @@ After changing `.env` (`WXT_GOOGLE_CLIENT_ID`), **rebuild and reload** the exten
 
 Chrome is configured locally (not remotely):
 
+### Pre-built ZIP from `main` (no clone)
+
+Each successful push to `main` publishes **`flashscore-calendar-chrome-main.zip`** on the rolling prerelease [**continuous**](https://github.com/benedyktdryl/flashscore-calendar/releases/tag/continuous) (workflow [`.github/workflows/release-main-zip.yml`](.github/workflows/release-main-zip.yml)). Direct download:
+
+**https://github.com/benedyktdryl/flashscore-calendar/releases/download/continuous/flashscore-calendar-chrome-main.zip**
+
+Unzip, then **Load unpacked** and pick the **extracted folder** (the directory that contains `manifest.json` at its root — not the `.zip` file).
+
+### From source
+
 1. `bun run dev` or `bun run build`.
 2. `chrome://extensions` → **Developer mode** → **Load unpacked**.
 3. Select:

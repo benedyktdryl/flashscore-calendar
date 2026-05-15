@@ -14,9 +14,7 @@ import { Helmet } from 'react-helmet-async';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { siteDescription, siteTitle, siteUrl } from '@/config/site';
-
-const repo = 'https://github.com/benedyktdryl/flashscore-calendar';
+import { siteDescription, siteTitle, siteUrl, githubRepoUrl, latestMainZipUrl, continuousReleaseUrl } from '@/config/site';
 
 export default function App() {
   const canonical = siteUrl ? `${siteUrl}/` : undefined;
@@ -28,8 +26,9 @@ export default function App() {
     operatingSystem: 'Chrome',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     description: siteDescription,
-    url: canonical ?? repo,
-    codeRepository: repo,
+    url: canonical ?? githubRepoUrl,
+    codeRepository: githubRepoUrl,
+    downloadUrl: latestMainZipUrl,
   };
 
   return (
@@ -72,7 +71,7 @@ export default function App() {
               </p>
             </div>
             <a
-              href={`${repo}#readme`}
+              href={`${githubRepoUrl}#readme`}
               className={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'no-underline')}
             >
               <Github className="size-4" aria-hidden />
@@ -84,17 +83,84 @@ export default function App() {
         <main className="mx-auto flex max-w-4xl flex-col gap-12 px-4 py-12">
           <section className="flex flex-col gap-4 text-left" aria-labelledby="install-heading">
             <h2 id="install-heading" className="text-xl font-semibold">
-              Instalacja (Chrome, rozwój)
+              Instalacja (Chrome)
             </h2>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Chrome className="size-5 text-primary" aria-hidden />
-                  Wczytaj rozpakowane (unpacked)
+                  <Download className="size-5 text-primary" aria-hidden />
+                  Gotowa paczka z ostatniego <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">main</code>
                 </CardTitle>
                 <CardDescription>
-                  Najprostszy sposób: zbuduj lokalnie lub pobierz artefakt z GitHub Actions, potem
-                  wczytaj folder <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">dist/chrome-mv3</code>.
+                  Po każdym zielonym buildzie na gałęzi <code className="rounded bg-muted px-1 font-mono">main</code>{' '}
+                  publikujemy ten sam plik pod stałym adresem — bez Bun i bez klonowania repozytorium.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <div className="flex flex-wrap gap-3">
+                  <a
+                    href={latestMainZipUrl}
+                    className={cn(
+                      buttonVariants({ variant: 'default', size: 'lg' }),
+                      'no-underline inline-flex items-center gap-2',
+                    )}
+                  >
+                    <Download className="size-4" aria-hidden />
+                    Pobierz ZIP (Chrome)
+                  </a>
+                  <a
+                    href={continuousReleaseUrl}
+                    className={cn(
+                      buttonVariants({ variant: 'outline', size: 'lg' }),
+                      'no-underline inline-flex items-center gap-2',
+                    )}
+                  >
+                    <Github className="size-4" aria-hidden />
+                    Wydanie „continuous”
+                  </a>
+                </div>
+                <ol className="list-decimal space-y-3 pl-5 text-sm text-muted-foreground">
+                  <li>
+                    Pobierz plik{' '}
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground">
+                      flashscore-calendar-chrome-main.zip
+                    </code>{' '}
+                    (link powyżej).
+                  </li>
+                  <li>
+                    Rozpakuj archiwum — powstanie folder z plikiem{' '}
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono">manifest.json</code> w korzeniu (bez
+                    dodatkowego podfolderu typu <code className="rounded bg-muted px-1 font-mono">chrome-mv3</code>).
+                  </li>
+                  <li>
+                    Otwórz{' '}
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono">chrome://extensions</code>, włącz{' '}
+                    <strong>Tryb deweloperski</strong>.
+                  </li>
+                  <li>
+                    <strong>Wczytaj rozpakowane</strong> → wskaż <strong>ten</strong> rozpakowany katalog (nie sam plik
+                    ZIP).
+                  </li>
+                  <li>
+                    Wejdź na{' '}
+                    <a className="text-primary underline" href="https://www.flashscore.pl/">
+                      flashscore.pl
+                    </a>{' '}
+                    — przy zaplanowanym meczu zobaczysz ikonę kalendarza obok TV.
+                  </li>
+                </ol>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Chrome className="size-5 text-primary" aria-hidden />
+                  Z kodu źródłowego (deweloper)
+                </CardTitle>
+                <CardDescription>
+                  Jeśli zmieniasz kod: zbuduj lokalnie i wskaż folder{' '}
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">dist/chrome-mv3</code>.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
@@ -114,28 +180,19 @@ export default function App() {
                   </li>
                   <li>
                     Otwórz{' '}
-                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono">chrome://extensions</code>
-                    , włącz <strong>Tryb deweloperski</strong>.
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono">chrome://extensions</code>, włącz{' '}
+                    <strong>Tryb deweloperski</strong>.
                   </li>
                   <li>
                     <strong>Wczytaj rozpakowane</strong> → wybierz{' '}
                     <code className="rounded bg-muted px-1.5 py-0.5 font-mono">dist/chrome-mv3</code>.
                   </li>
-                  <li>
-                    Wejdź na{' '}
-                    <a className="text-primary underline" href="https://www.flashscore.pl/">
-                      flashscore.pl
-                    </a>{' '}
-                    — przy zaplanowanym meczu zobaczysz ikonę kalendarza obok TV.
-                  </li>
                 </ol>
                 <Separator />
                 <p className="text-sm text-muted-foreground">
                   Szybki podgląd z HMR:{' '}
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground">
-                    bun run dev
-                  </code>{' '}
-                  → wczytaj{' '}
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground">bun run dev</code> →
+                  wczytaj{' '}
                   <code className="rounded bg-muted px-1.5 py-0.5 font-mono">dist/chrome-mv3-dev</code>.
                 </p>
               </CardContent>
@@ -222,7 +279,7 @@ export default function App() {
         </main>
 
         <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-          <a href={repo} className="text-primary underline">
+          <a href={githubRepoUrl} className="text-primary underline">
             GitHub — flashscore-calendar
           </a>
           {canonical ? (

@@ -28,6 +28,7 @@ jobs:
         env:
           VITE_SITE_URL: https://example.github.io/flashscore-calendar
           VITE_BASE_PATH: /flashscore-calendar/
+          VITE_GITHUB_REPO: example/flashscore-calendar
         run: |
           bun install --frozen-lockfile
           bun run build

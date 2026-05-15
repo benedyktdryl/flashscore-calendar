@@ -1,0 +1,62 @@
+# Publishes a stable ZIP from main for “load unpacked” installs (no local build).
+# Asset URL: .../releases/download/continuous/flashscore-calendar-chrome-main.zip
+
+name: Release ZIP (main)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main-zip
+  cancel-in-progress: true
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build extension zip
+        run: |
+          bun install --frozen-lockfile
+          bun run zip
+
+      - name: Stable filename for download links
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          matches=(dist/flashscore-calendar-*-chrome.zip)
+          if [[ ${#matches[@]} -ne 1 ]]; then
+            echo "Expected exactly one dist/flashscore-calendar-*-chrome.zip, found ${#matches[@]} file(s)"
+            printf '%s\n' "${matches[@]}"
+            ls -la dist
+            exit 1
+          fi
+          cp "${matches[0]}" flashscore-calendar-chrome-main.zip
+          ls -la flashscore-calendar-chrome-main.zip
+
+      - name: Upload to rolling prerelease (tag continuous)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          ZIP="flashscore-calendar-chrome-main.zip"
+          if gh release view continuous --repo "$REPO" &>/dev/null; then
+            gh release upload continuous "$ZIP" --clobber --repo "$REPO"
+          else
+            gh release create continuous "$ZIP" \
+              --repo "$REPO" \
+              --title "Najnowsza paczka (main)" \
+              --notes "Automatyczny build z gałęzi \`main\`. Rozpakuj ZIP, potem w Chrome: **Wczytaj rozpakowane** i wskaż **ten folder** (ten z \`manifest.json\` w środku, bez dodatkowego zagnieżdżania)." \
+              --prerelease
+          fi
