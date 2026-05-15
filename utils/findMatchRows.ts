@@ -3,26 +3,34 @@ import { SELECTORS } from './selectors';
 const TEAM_VS_TEAM = /^(.+?)\s+-\s+(.+?)$/;
 
 function isTeamVsTeamLink(anchor: HTMLAnchorElement): boolean {
-  const text = (anchor.textContent ?? '').replace(/\s+/g, ' ').trim();
-  if (!TEAM_VS_TEAM.test(text)) return false;
-  if (text.length > 70 || text.includes(':')) return false;
+  const label = (anchor.getAttribute('aria-label') ?? anchor.textContent ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!TEAM_VS_TEAM.test(label)) return false;
+  if (label.length > 70 || label.includes(':')) return false;
   const href = anchor.getAttribute('href') ?? '';
   if (!href || href === '#' || href.startsWith('javascript:')) return false;
-  return true;
+  return anchor.classList.contains('eventRowLink') || href.includes('/mecz/');
 }
 
-/** Row container to attach the calendar button. */
 export function getButtonMount(row: Element): Element {
   if (row.matches(SELECTORS.matchRow)) return row;
-  if (row.matches('a')) {
-    return (
-      row.closest('.event__match') ??
-      row.closest('[class*="event__"]') ??
-      row.parentElement ??
-      row
-    );
-  }
-  return row;
+  return (
+    row.closest(SELECTORS.matchRow) ??
+    row.closest('[id^="g_"]') ??
+    row.closest('[class*="event__match"]') ??
+    row.parentElement ??
+    row
+  );
+}
+
+/** Insert before betting/live badge so the button sits with Preview / TV icons. */
+export function getButtonInsertBefore(row: Element): Element | null {
+  const mount = getButtonMount(row);
+  const anchor =
+    mount.querySelector('.liveBetWrapper') ??
+    mount.querySelector(SELECTORS.actionsAnchor);
+  return anchor;
 }
 
 export function findMatchRows(root: ParentNode = document): Element[] {
@@ -38,11 +46,11 @@ export function findMatchRows(root: ParentNode = document): Element[] {
     (el): el is HTMLAnchorElement => el instanceof HTMLAnchorElement,
   );
   if (fromHref.length > 0) {
-    return fromHref.map((a) => getButtonMount(a));
+    return [...new Set(fromHref.map((a) => getButtonMount(a)))];
   }
 
   const fromText = [...scope.querySelectorAll('a')].filter(
     (el): el is HTMLAnchorElement => el instanceof HTMLAnchorElement && isTeamVsTeamLink(el),
   );
-  return fromText.map((a) => getButtonMount(a));
+  return [...new Set(fromText.map((a) => getButtonMount(a)))];
 }

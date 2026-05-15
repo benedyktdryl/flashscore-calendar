@@ -1,7 +1,14 @@
-import { getButtonMount } from './findMatchRows';
+import { getButtonMount, getButtonInsertBefore } from './findMatchRows';
 import { SELECTORS } from './selectors';
 import type { MatchPayload } from './types';
 import { readPageDate } from './parsePageDate';
+
+function readTeamName(container: Element | null): string {
+  if (!container) return '';
+  const named = container.querySelector(SELECTORS.teamName);
+  if (named) return (named.textContent ?? '').trim();
+  return (container.textContent ?? '').trim();
+}
 
 function findLeagueName(row: Element): string {
   let current: Element | null = row.previousElementSibling;
@@ -30,18 +37,15 @@ function findLeagueName(row: Element): string {
 }
 
 function readBroadcast(row: Element): string | undefined {
-  const root = row.closest('.event__match, [class*="event"]') ?? row.parentElement ?? row;
+  const root = row.closest('.event__match') ?? row;
   const tv = root.querySelector(SELECTORS.tvIcon);
   if (!tv) return undefined;
 
-  const title = tv.getAttribute('title')?.trim();
-  if (title) return title;
-
   const aria = tv.getAttribute('aria-label')?.trim();
-  if (aria) return aria;
+  if (aria) return aria.replace(/^TV\s*\/\s*Transmisja na żywo:\s*/i, '');
 
-  const parentTitle = tv.parentElement?.getAttribute('title')?.trim();
-  return parentTitle || undefined;
+  const title = tv.getAttribute('title')?.trim();
+  return title || undefined;
 }
 
 function isScheduledKickoff(timeText: string): boolean {
@@ -60,7 +64,9 @@ function buildKickoffIso(pageDate: string, timeText: string): string | null {
 
 function matchIdFromRow(row: Element, home: string, away: string, kickoffIso: string): string {
   if (row.id) return row.id;
-  const anchor = row.querySelector('a[href*="/mecz/"], a[href*="/match/"]') ?? (row.matches('a') ? row : null);
+  const anchor = row.querySelector<HTMLAnchorElement>(SELECTORS.matchRowLink);
+  const mid = anchor?.href?.match(/[?&]mid=([^&]+)/)?.[1];
+  if (mid) return mid;
   const href = anchor?.getAttribute('href');
   if (href) return href;
   return `${home}|${away}|${kickoffIso}`;
@@ -74,40 +80,28 @@ function findKickoffTime(row: Element): string | null {
     if (isScheduledKickoff(text)) return text;
   }
 
-  const container = mount.closest('[class*="event"]') ?? mount.parentElement ?? mount;
-  const timeCandidates = container.querySelectorAll(
-    '.event__time, [class*="event__time"], [class*="time"]',
-  );
-  for (const el of timeCandidates) {
-    const text = (el.textContent ?? '').trim();
-    if (isScheduledKickoff(text)) return text;
-  }
-
-  const blockText = container.textContent ?? '';
+  const blockText = mount.textContent ?? '';
   const match = blockText.match(/\b(\d{1,2}:\d{2})\b/);
   return match?.[1] ?? null;
 }
 
 function parseTeamsFromParticipants(row: Element): { home: string; away: string } | null {
   const mount = getButtonMount(row);
-  const homeEl = mount.querySelector(SELECTORS.homeTeam);
-  const awayEl = mount.querySelector(SELECTORS.awayTeam);
-  if (!homeEl || !awayEl) return null;
-
-  const home = (homeEl.textContent ?? '').trim();
-  const away = (awayEl.textContent ?? '').trim();
+  const home = readTeamName(mount.querySelector(SELECTORS.homeTeam));
+  const away = readTeamName(mount.querySelector(SELECTORS.awayTeam));
   if (!home || !away) return null;
   return { home, away };
 }
 
-function parseTeamsFromLink(row: Element): { home: string; away: string } | null {
-  const anchor =
-    (row.matches('a') ? row : null) ??
-    row.querySelector('a[href*="/mecz/"], a[href*="/match/"]');
+function parseTeamsFromRowLink(row: Element): { home: string; away: string } | null {
+  const mount = getButtonMount(row);
+  const anchor = mount.querySelector(SELECTORS.matchRowLink);
   if (!anchor) return null;
 
-  const text = (anchor.textContent ?? '').replace(/\s+/g, ' ').trim();
-  const parts = text.split(/\s+-\s+/);
+  const label = (anchor.getAttribute('aria-label') ?? anchor.textContent ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const parts = label.split(/\s+-\s+/);
   if (parts.length < 2) return null;
 
   const home = parts[0]?.trim();
@@ -126,7 +120,8 @@ export function parseMatchRow(
   const timeText = findKickoffTime(row);
   if (!timeText) return null;
 
-  const teams = parseTeamsFromParticipants(row) ?? parseTeamsFromLink(row);
+  const teams =
+    parseTeamsFromParticipants(row) ?? parseTeamsFromRowLink(row);
   if (!teams) return null;
 
   const kickoffIso = buildKickoffIso(resolvedDate, timeText);

@@ -1,5 +1,5 @@
 import '../assets/flashscore-button.css';
-import { findMatchRows, getButtonMount } from '../utils/findMatchRows';
+import { findMatchRows, getButtonInsertBefore, getButtonMount } from '../utils/findMatchRows';
 import { buildGoogleCalendarTemplateUrl } from '../utils/googleCalendarUrl';
 import { downloadIcsFile } from '../utils/ics';
 import { getCalendarMode, type CalendarMode } from '../utils/mode';
@@ -147,7 +147,12 @@ function injectButton(row: Element, pageDate: string | null, mode: CalendarMode)
   if (!match) return;
 
   const button = createButton(match, mode);
-  mount.append(button);
+  const insertBefore = getButtonInsertBefore(row);
+  if (insertBefore?.parentElement) {
+    insertBefore.parentElement.insertBefore(button, insertBefore);
+  } else {
+    mount.append(button);
+  }
 
   void isMatchAdded(match.id).then((added) => {
     if (added) setButtonState(button, 'added');
@@ -165,8 +170,11 @@ function scheduleRescans(mode: CalendarMode): void {
   for (const ms of RESCAN_MS) {
     window.setTimeout(() => {
       const count = scanAndInject(document, mode);
-      if (count > 0 && ms === 0) {
-        console.info(`[flashscore-calendar] Injected buttons for ${count} match row(s).`);
+      if (ms === 6000) {
+        const buttons = document.querySelectorAll(`.${BUTTON_CLASS}`).length;
+        console.info(
+          `[flashscore-calendar] Rows scanned: ${count}, buttons on page: ${buttons}, date: ${readPageDate() ?? 'unknown'}`,
+        );
       }
     }, ms);
   }
@@ -176,6 +184,8 @@ export default defineContentScript({
   matches: [...FLASHSCORE_MATCHES],
   runAt: 'document_idle',
   main() {
+    console.info('[flashscore-calendar] Content script active on', location.href);
+
     let currentMode: CalendarMode = 'google-url';
 
     const start = (mode: CalendarMode) => {
@@ -183,7 +193,10 @@ export default defineContentScript({
       scheduleRescans(mode);
     };
 
-    void getCalendarMode().then(start);
+    void getCalendarMode().then(start).catch((error) => {
+      console.error('[flashscore-calendar] Failed to read mode', error);
+      scheduleRescans('google-url');
+    });
 
     browser.storage.onChanged.addListener((changes, area) => {
       if (area !== 'sync' || !changes.calendarMode) return;
