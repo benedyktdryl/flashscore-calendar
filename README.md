@@ -208,21 +208,24 @@ bun run zip          # production zip → dist/*-chrome.zip
 bun run compile      # TypeScript
 bun run lint         # oxlint
 bun run format       # oxfmt
+bun run website:dev   # marketing site (Vite) → http://localhost:5173/flashscore-calendar/
+bun run website:build # production build of the site → website/dist/
 ```
 
-## Chrome Web Store (automated release)
+## Documentation site (GitHub Pages)
 
-GitHub Actions can **build**, **attach the zip to a GitHub Release**, and **upload + publish** to the Chrome Web Store when you push a **version tag** (`v0.2.0`, etc.).
+The install / configuration guide is published as a static site (Vite + React + Tailwind, shadcn-style UI):
 
-1. Configure repository **secrets** and complete the one-time Store / OAuth setup — see **[docs/CHROME_WEB_STORE_RELEASE.md](docs/CHROME_WEB_STORE_RELEASE.md)**.
-2. Bump `version` in `package.json`, commit, then:
+**https://benedyktdryl.github.io/flashscore-calendar/**
 
-   ```bash
-   git tag v0.2.0 && git push origin v0.2.0
-   ```
+Enable it once: **Repository → Settings → Pages → Build and deployment → Source: GitHub Actions**.  
+Pushes to `main` run [`.github/workflows/pages.yml`](.github/workflows/pages.yml) and deploy `website/dist`.
 
-3. Watch **Actions → Release (Chrome)**.
+Local preview:
 
-Manual run (e.g. test CI without uploading): **Actions → Release (Chrome) → Run workflow** and turn off **publish_to_chrome**.
+```bash
+bun run website:dev
+# open http://localhost:5173/flashscore-calendar/
+```
 
-There is no separate “sync” step: the refresh token ties the API to **your** publisher account; each tag push submits a new package to **that** extension ID.
+For a fork, set `VITE_SITE_URL` and `VITE_BASE_PATH` in [`website/.env.production`](website/.env.production) to match `https://<user>.github.io/<repo>/`.

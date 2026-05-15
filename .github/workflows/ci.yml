@@ -1,4 +1,4 @@
-# Lint and build on every push and PR (does not publish to Chrome Web Store).
+# Lint and build extension + marketing site on push/PR.
 
 name: CI
 
@@ -18,5 +18,16 @@ jobs:
         with:
           bun-version: latest
 
-      - run: bun install --frozen-lockfile
-      - run: bun run lint && bun run compile && bun run build
+      - name: Extension
+        run: |
+          bun install --frozen-lockfile
+          bun run lint && bun run compile && bun run build
+
+      - name: GitHub Pages site
+        working-directory: website
+        env:
+          VITE_SITE_URL: https://example.github.io/flashscore-calendar
+          VITE_BASE_PATH: /flashscore-calendar/
+        run: |
+          bun install --frozen-lockfile
+          bun run build

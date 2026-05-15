@@ -14,7 +14,9 @@
     "lint": "oxlint .",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "website:dev": "cd website && bun run dev",
+    "website:build": "cd website && bun install && bun run build"
   },
   "devDependencies": {
     "oxfmt": "^0.49.0",
