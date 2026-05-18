@@ -1,9 +1,9 @@
-import { SELECTORS } from './selectors';
+import { BUTTON_CLASS, SELECTORS } from './selectors';
 
 const TEAM_VS_TEAM = /^(.+?)\s+-\s+(.+?)$/;
 
-/** Grid columns: iconStr (audio) | iconInf | iconTv | iconStd | liveIcon */
-const ICON_SLOTS_NEXT_TO_TV = ['iconInf'] as const;
+/** Grid columns: iconStr (audio) | iconInf (info) | iconTv | iconStd (calendar) | liveIcon */
+const CALENDAR_GRID_AREA = 'iconStd';
 
 function isTeamVsTeamLink(anchor: HTMLAnchorElement): boolean {
   const label = (anchor.getAttribute('aria-label') ?? anchor.textContent ?? '')
@@ -27,43 +27,33 @@ export function getButtonMount(row: Element): Element {
   );
 }
 
-function usedGridAreas(mount: Element): Set<string> {
-  const used = new Set<string>();
-  for (const child of mount.children) {
-    used.add(getComputedStyle(child).gridArea);
-  }
-  return used;
-}
-
-/** Pick an empty icon column beside TV (FlashScore CSS grid). */
-export function getCalendarGridArea(mount: Element): string {
-  const used = usedGridAreas(mount);
-  for (const slot of ICON_SLOTS_NEXT_TO_TV) {
-    if (!used.has(slot)) return slot;
-  }
-  return 'iconStd';
+/** Calendar always uses iconStd (slot after TV, before LIVE). */
+export function getCalendarGridArea(_mount: Element): string {
+  return CALENDAR_GRID_AREA;
 }
 
 /** Place in the match row icon strip (same grid row as TV / LIVE). */
 export function insertCalendarButton(mount: Element, button: HTMLElement): void {
-  const gridArea = getCalendarGridArea(mount);
-  button.style.gridArea = gridArea;
+  button.style.gridArea = CALENDAR_GRID_AREA;
 
   const tv = mount.querySelector('.event__icon--tv');
   if (tv) {
-    tv.insertAdjacentElement('beforebegin', button);
+    tv.insertAdjacentElement('afterend', button);
     return;
   }
 
-  const audio = mount.querySelector('.event__icon--audio');
-  if (audio) {
-    audio.insertAdjacentElement('afterend', button);
+  const icons = [...mount.querySelectorAll(':scope > .event__icon')].filter(
+    (el) => !el.classList.contains(BUTTON_CLASS),
+  );
+  const lastIcon = icons.at(-1);
+  if (lastIcon) {
+    lastIcon.insertAdjacentElement('afterend', button);
     return;
   }
 
   const liveBet = mount.querySelector('.liveBetWrapper');
-  if (liveBet?.parentElement) {
-    liveBet.parentElement.insertBefore(button, liveBet);
+  if (liveBet) {
+    liveBet.insertAdjacentElement('beforebegin', button);
     return;
   }
 

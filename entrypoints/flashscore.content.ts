@@ -1,5 +1,6 @@
 import '../assets/flashscore-button.css';
 import { calendarIconSvg } from '../utils/calendarIcon';
+import { bindFlashscoreTooltip, updateFlashscoreTooltip } from '../utils/flashscoreTooltip';
 import { findMatchRows, getButtonMount, insertCalendarButton } from '../utils/findMatchRows';
 import { buildGoogleCalendarTemplateUrl } from '../utils/googleCalendarUrl';
 import { downloadIcsFile } from '../utils/ics';
@@ -27,6 +28,7 @@ function setButtonState(
 
   if (state === 'error') {
     button.classList.add(`${BUTTON_CLASS}--error`);
+    updateFlashscoreTooltip(button, 'Błąd — kliknij ponownie');
     button.setAttribute('aria-label', 'Błąd — kliknij ponownie');
     button.style.opacity = '';
     button.innerHTML = calendarIconSvg();
@@ -34,6 +36,7 @@ function setButtonState(
   }
 
   if (state === 'loading') {
+    updateFlashscoreTooltip(button, 'Otwieranie kalendarza…');
     button.setAttribute('aria-label', 'Otwieranie kalendarza…');
     button.style.opacity = '0.45';
     button.innerHTML = calendarIconSvg();
@@ -41,7 +44,9 @@ function setButtonState(
   }
 
   const mode = button.dataset.fscMode as CalendarMode | undefined;
-  button.setAttribute('aria-label', mode ? MODE_LABEL[mode] : 'Dodaj do kalendarza');
+  const label = mode ? MODE_LABEL[mode] : 'Dodaj do kalendarza';
+  button.setAttribute('aria-label', label);
+  updateFlashscoreTooltip(button, label);
   button.style.opacity = '';
   button.innerHTML = calendarIconSvg();
 }
@@ -99,7 +104,7 @@ function createButton(match: MatchPayload, mode: CalendarMode): HTMLButtonElemen
   button.className = `event__icon ${BUTTON_CLASS}`;
   button.setAttribute(BUTTON_ATTR, 'true');
   button.dataset.fscMode = mode;
-  button.title = MODE_LABEL[mode];
+  bindFlashscoreTooltip(button, MODE_LABEL[mode]);
   setButtonState(button, 'idle');
   button.addEventListener('click', (event) => {
     event.preventDefault();

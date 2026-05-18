@@ -4,9 +4,12 @@ button.fsc-add-calendar-btn.event__icon {
   align-items: center;
   justify-content: center;
   align-self: center;
+  justify-self: center;
   box-sizing: border-box;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  min-height: 15px;
   margin: 0;
   padding: 0;
   border: none;
@@ -37,8 +40,9 @@ button.fsc-add-calendar-btn.event__icon:disabled {
 button.fsc-add-calendar-btn.event__icon svg,
 button.fsc-add-calendar-btn.event__icon .fsc-calendar-icon__svg {
   display: block;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
 }
 
 button.fsc-add-calendar-btn--error.event__icon {
@@ -51,4 +55,35 @@ button.fsc-add-calendar-btn--error.event__icon:hover {
 
 .event__match--withRowLink .fsc-add-calendar-btn {
   z-index: 30;
+}
+
+/* Shared tooltip (fixed to viewport — icon lives in CSS grid, not under cursor) */
+.fsc-calendar-tooltip {
+  position: fixed;
+  z-index: 10000;
+  transform: translate(-50%, calc(-100% - 6px));
+  max-width: 280px;
+  padding: 8px;
+  border-radius: 4px;
+  background: rgb(0, 20, 30);
+  color: rgb(238, 238, 238);
+  font:
+    13px / 1.3 -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: rgba(0, 0, 0, 0.16) 1px 2px 12px 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+}
+
+.fsc-calendar-tooltip[data-visible='true'] {
+  opacity: 1;
+  visibility: visible;
 }
